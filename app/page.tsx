@@ -3,8 +3,36 @@
 
 import { useState, type FormEvent } from "react";
 import { translations, type Language } from "./translations";
+import { Turnstile } from "@marsidev/react-turnstile";
 
 type Attendance = "yes" | "no" | "";
+
+const messages = {
+  en: {
+    saving: "Saving your RSVP...",
+    success: "Your RSVP has been saved successfully!",
+    error: "We couldn't save your RSVP. Please try again.",
+    duplicate:
+      "This phone number has already been used for an RSVP. Please contact the couple if you need to change your response.",
+    verification: "Please complete the security check before submitting.",
+  },
+  ar: {
+    saving: "جارٍ حفظ ردك...",
+    success: "تم حفظ ردك بنجاح!",
+    error: "تعذر حفظ ردك. يرجى المحاولة مرة أخرى.",
+    duplicate:
+      "تم تسجيل رد سابق باستخدام رقم الهاتف هذا. يرجى التواصل مع العروسين إذا كنت ترغب في تعديل ردك.",
+    verification: "يرجى إكمال التحقق الأمني قبل إرسال الرد.",
+  },
+  sv: {
+    saving: "Sparar ditt svar...",
+    success: "Ditt svar har sparats!",
+    error: "Det gick inte att spara ditt svar. Försök igen.",
+    duplicate:
+      "Det här telefonnumret har redan använts för en OSA-anmälan. Kontakta brudparet om du behöver ändra ditt svar.",
+    verification: "Slutför säkerhetskontrollen innan du skickar ditt svar.",
+  },
+};
 
 export default function Home() {
   const [opened, setOpened] = useState(false);
@@ -14,12 +42,19 @@ export default function Home() {
   const [phone, setPhone] = useState("");
   const [guestCount, setGuestCount] = useState(1);
   const [submitted, setSubmitted] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const [turnstileKey, setTurnstileKey] = useState(0);
 
   const t = translations[language];
+  const m = messages[language];
   const isArabic = language === "ar";
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    if (saving || submitted) return;
 
     if (!attendance || !guestName.trim() || !phone.trim()) {
       return;
@@ -34,8 +69,49 @@ export default function Home() {
       return;
     }
 
-    // Supabase saving will be added later.
-    setSubmitted(true);
+    if (!turnstileToken) {
+      setSaveError(m.verification);
+      return;
+    }
+
+    setSaving(true);
+    setSaveError("");
+
+    try {
+      const response = await fetch("/api/rsvp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          guest_name: guestName.trim(),
+          phone: phone.trim(),
+          attendance,
+          guest_count: attendance === "yes" ? guestCount : 0,
+          turnstileToken,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        setSaveError(
+          result.error === "duplicate_phone"
+            ? m.duplicate
+            : result.error === "verification_required" ||
+                result.error === "verification_failed"
+              ? m.verification
+              : m.error
+        );
+        return;
+      }
+
+      setSubmitted(true);
+    } catch {
+      setSaveError(m.error);
+    } finally {
+      setSaving(false);
+      setTurnstileToken("");
+      setTurnstileKey((current) => current + 1);
+    }
   }
 
   return (
@@ -146,9 +222,7 @@ export default function Home() {
                   aria-label={t.tapDoors}
                   className="absolute left-[22%] top-[16%] z-20 h-[64%] w-[56%] cursor-pointer rounded-t-full focus-visible:outline-4 focus-visible:outline-[#a58056]"
                 >
-                  <span className="sr-only">
-                    {t.tapDoors}
-                  </span>
+                  <span className="sr-only">{t.tapDoors}</span>
                 </button>
               )}
             </div>
@@ -216,7 +290,7 @@ export default function Home() {
                   </h3>
 
                   <p className="mt-3 text-sm text-[#8c7462]">
-                    {t.previewNotice}
+                    {m.success}
                   </p>
 
                   <p className="mt-4 font-medium">
@@ -228,14 +302,6 @@ export default function Home() {
                         }`
                       : t.declining}
                   </p>
-
-                  <button
-                    type="button"
-                    onClick={() => setSubmitted(false)}
-                    className="mt-6 rounded-full border border-[#a58056] px-6 py-2 text-sm"
-                  >
-                    {t.edit}
-                  </button>
                 </div>
               ) : (
                 <>
@@ -252,7 +318,7 @@ export default function Home() {
                     className="space-y-5"
                   >
                     {/* Attendance */}
-                    <fieldset>
+                    <fieldset disabled={saving}>
                       <legend className="mb-3 text-sm font-medium">
                         {t.attendance} *
                       </legend>
@@ -270,9 +336,10 @@ export default function Home() {
                             name="attendance"
                             value="yes"
                             checked={attendance === "yes"}
-                            onChange={() =>
-                              setAttendance("yes")
-                            }
+                            onChange={() => {
+                              setAttendance("yes");
+                              setSaveError("");
+                            }}
                             className="mx-2 shrink-0 accent-[#a58056]"
                             required
                           />
@@ -291,9 +358,10 @@ export default function Home() {
                             name="attendance"
                             value="no"
                             checked={attendance === "no"}
-                            onChange={() =>
-                              setAttendance("no")
-                            }
+                            onChange={() => {
+                              setAttendance("no");
+                              setSaveError("");
+                            }}
                             className="mx-2 shrink-0 accent-[#a58056]"
                             required
                           />
@@ -315,14 +383,16 @@ export default function Home() {
                         id="guest-name"
                         type="text"
                         value={guestName}
-                        onChange={(event) =>
-                          setGuestName(event.target.value)
-                        }
+                        onChange={(event) => {
+                          setGuestName(event.target.value);
+                          setSaveError("");
+                        }}
                         placeholder={t.namePlaceholder}
                         autoComplete="name"
                         required
                         maxLength={100}
-                        className="w-full rounded-xl border border-[#e1c9a9] bg-white px-4 py-3 text-base outline-none focus:border-[#a58056]"
+                        disabled={saving}
+                        className="w-full rounded-xl border border-[#e1c9a9] bg-white px-4 py-3 text-base outline-none focus:border-[#a58056] disabled:opacity-60"
                       />
                     </div>
 
@@ -340,14 +410,16 @@ export default function Home() {
                         type="tel"
                         dir="ltr"
                         value={phone}
-                        onChange={(event) =>
-                          setPhone(event.target.value)
-                        }
+                        onChange={(event) => {
+                          setPhone(event.target.value);
+                          setSaveError("");
+                        }}
                         placeholder={t.phonePlaceholder}
                         autoComplete="tel"
                         required
                         maxLength={30}
-                        className="w-full rounded-xl border border-[#e1c9a9] bg-white px-4 py-3 text-base outline-none focus:border-[#a58056]"
+                        disabled={saving}
+                        className="w-full rounded-xl border border-[#e1c9a9] bg-white px-4 py-3 text-base outline-none focus:border-[#a58056] disabled:opacity-60"
                       />
                     </div>
 
@@ -374,7 +446,8 @@ export default function Home() {
                             )
                           }
                           required
-                          className="w-full rounded-xl border border-[#e1c9a9] bg-white px-4 py-3 text-base outline-none focus:border-[#a58056]"
+                          disabled={saving}
+                          className="w-full rounded-xl border border-[#e1c9a9] bg-white px-4 py-3 text-base outline-none focus:border-[#a58056] disabled:opacity-60"
                         />
 
                         <p className="mt-2 text-xs text-[#8c7462]">
@@ -383,11 +456,45 @@ export default function Home() {
                       </div>
                     )}
 
+                    {/* Cloudflare Turnstile */}
+                    <div className="flex flex-col items-center gap-2">
+                      {process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ? (
+                        <Turnstile
+                          key={turnstileKey}
+                          siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY}
+                          options={{ theme: "light" }}
+                          onSuccess={(token) => {
+                            setTurnstileToken(token);
+                            setSaveError("");
+                          }}
+                          onExpire={() => setTurnstileToken("")}
+                          onError={() => {
+                            setTurnstileToken("");
+                            setSaveError(m.verification);
+                          }}
+                        />
+                      ) : (
+                        <p role="alert" className="text-sm text-red-700">
+                          {m.error}
+                        </p>
+                      )}
+                    </div>
+
+                    {saveError && (
+                      <p
+                        role="alert"
+                        className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-center text-sm text-red-700"
+                      >
+                        {saveError}
+                      </p>
+                    )}
+
                     <button
                       type="submit"
-                      className="w-full rounded-full bg-[#a58056] px-6 py-3 text-sm font-semibold uppercase tracking-wider text-white transition hover:bg-[#8e6945]"
+                      disabled={saving || !turnstileToken}
+                      className="w-full rounded-full bg-[#a58056] px-6 py-3 text-sm font-semibold uppercase tracking-wider text-white transition hover:bg-[#8e6945] disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      {t.submit}
+                      {saving ? m.saving : t.submit}
                     </button>
                   </form>
                 </>
@@ -398,13 +505,16 @@ export default function Home() {
               <button
                 type="button"
                 onClick={() => {
+                  if (saving) return;
+
                   setOpened(false);
                   window.scrollTo({
                     top: 0,
                     behavior: "smooth",
                   });
                 }}
-                className="text-sm underline underline-offset-4"
+                disabled={saving}
+                className="text-sm underline underline-offset-4 disabled:opacity-60"
               >
                 {t.close}
               </button>
