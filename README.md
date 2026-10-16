@@ -4,6 +4,12 @@ A beautiful, interactive digital wedding invitation built with Next.js.
 
 Guests can open the invitation online, view the wedding details, and submit their RSVP directly from their phone or computer.
 
+## 🌐 Live Demo
+
+Experience the wedding invitation here:
+
+**[View Live Application](https://invitation-app-kappa.vercel.app/)**
+
 ## Features
 
 - Elegant floral wedding invitation with an opening animation
