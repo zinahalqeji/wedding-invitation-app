@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, type FormEvent } from "react";
@@ -128,10 +127,10 @@ export default function Home() {
             className="relative h-[100svh] min-h-[500px] w-full overflow-hidden bg-[#e8d3ba] shadow-2xl sm:mx-auto sm:mt-8 sm:h-auto sm:min-h-0 sm:rounded-xl"
           >
             <div
-              className="absolute left-1/2 top-1/2 h-full -translate-x-1/2 -translate-y-1/2 sm:relative sm:left-auto sm:top-auto sm:h-auto sm:translate-x-0 sm:translate-y-0"
+              className="absolute left-1/2 top-1/2 h-full max-w-full -translate-x-1/2 -translate-y-1/2 sm:relative sm:left-auto sm:top-auto sm:h-auto sm:translate-x-0 sm:translate-y-0"
               style={{
                 aspectRatio: "1024 / 1536",
-                minWidth: "100%",
+                width: "100%",
               }}
             >
               {/* Floral background */}
@@ -441,9 +440,7 @@ export default function Home() {
                           step={1}
                           value={guestCount}
                           onChange={(event) =>
-                            setGuestCount(
-                              Number(event.target.value)
-                            )
+                            setGuestCount(Number(event.target.value))
                           }
                           required
                           disabled={saving}
@@ -461,7 +458,9 @@ export default function Home() {
                       {process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ? (
                         <Turnstile
                           key={turnstileKey}
-                          siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY}
+                          siteKey={
+                            process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY
+                          }
                           options={{ theme: "light" }}
                           onSuccess={(token) => {
                             setTurnstileToken(token);
@@ -474,7 +473,10 @@ export default function Home() {
                           }}
                         />
                       ) : (
-                        <p role="alert" className="text-sm text-red-700">
+                        <p
+                          role="alert"
+                          className="text-sm text-red-700"
+                        >
                           {m.error}
                         </p>
                       )}
