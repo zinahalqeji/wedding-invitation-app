@@ -1,36 +1,72 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Wedding Invitation App 💍
+
+A beautiful, interactive digital wedding invitation built with Next.js.
+
+Guests can open the invitation online, view the wedding details, and submit their RSVP directly from their phone or computer.
+
+## Features
+
+- Elegant floral wedding invitation with an opening animation
+- Multilingual invitation experience
+- Mobile-friendly design
+- Online RSVP form
+- Guest attendance and guest-count tracking
+- Secure RSVP verification using Cloudflare Turnstile
+- RSVP responses stored in Supabase
+- Deployment through Vercel
+
+## Technologies
+
+- **Next.js** — Application framework
+- **React & TypeScript** — User interface and application logic
+- **Supabase** — RSVP database
+- **Cloudflare Turnstile** — Spam and bot protection
+- **Vercel** — Hosting and deployment
+- **GitHub** — Source code and version control
 
 ## Getting Started
 
-First, run the development server:
+Clone the repository and install dependencies:
+
+```bash
+npm install
+```
+
+Create a `.env.local` file with the required environment variables:
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=
+SUPABASE_SERVICE_ROLE_KEY=
+NEXT_PUBLIC_TURNSTILE_SITE_KEY=
+TURNSTILE_SECRET_KEY=
+```
+
+Keep secret keys private. Never commit `.env.local` to GitHub.
+
+Start the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000 to view the invitation.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## RSVP System
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Guests submit their name, phone number, attendance response, and guest count.
 
-## Learn More
+The application verifies the Cloudflare Turnstile token on the server before saving RSVP information to Supabase.
 
-To learn more about Next.js, take a look at the following resources:
+## Deployment
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+The application is deployed using Vercel and connected to the GitHub repository.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Production environment variables are configured securely in Vercel.
 
-## Deploy on Vercel
+## Privacy
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Guest information is stored in Supabase and should only be accessible to authorized administrators.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Project Status
+
+The wedding invitation and RSVP submission system have been implemented and tested successfully.
